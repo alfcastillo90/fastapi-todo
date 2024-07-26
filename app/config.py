@@ -1,1 +1,2 @@
-DATABASE_URL = "mysql+aiomysql://user:password@localhost/todo_db"
+# config.py
+DATABASE_URL = "mysql+aiomysql://root:@localhost/todo_db"
