@@ -12,10 +12,12 @@ async def create_task(db: AsyncSession, task: Task):
     await db.refresh(task)
     return task
 
-async def update_task(db: AsyncSession, task_id: int, text: str, completed: bool):
+async def update_task(db: AsyncSession, task_id: int, title: str, description: str, score: int, completed: bool):
     task = await db.get(Task, task_id)
     if task:
-        task.text = text
+        task.title = title
+        task.description = description
+        task.score = score
         task.completed = completed
         await db.commit()
         await db.refresh(task)

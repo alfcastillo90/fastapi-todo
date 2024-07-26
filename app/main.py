@@ -39,7 +39,12 @@ async def startup():
 
 @app.post("/tasks/", response_model=schemas.Task, tags=["tasks"])
 async def create_task(task: schemas.TaskCreate, db: AsyncSession = Depends(get_db)):
-    db_task = Task(text=task.text, completed=task.completed)
+    db_task = Task(
+        title=task.title,
+        description=task.description,
+        score=task.score,
+        completed=task.completed
+    )
     return await crud.create_task(db, db_task)
 
 @app.get("/tasks/", response_model=List[schemas.Task], tags=["tasks"])
@@ -48,7 +53,7 @@ async def read_tasks(db: AsyncSession = Depends(get_db)):
 
 @app.put("/tasks/{task_id}", response_model=schemas.Task, tags=["tasks"])
 async def update_task(task_id: int, task: schemas.TaskUpdate, db: AsyncSession = Depends(get_db)):
-    db_task = await crud.update_task(db, task_id, task.text, task.completed)
+    db_task = await crud.update_task(db, task_id, task.title, task.description, task.score, task.completed)
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
     return db_task

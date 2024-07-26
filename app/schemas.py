@@ -1,8 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class TaskBase(BaseModel):
-    text: str
-    completed: bool
+    title: str = Field(..., min_length=1, max_length=255)
+    description: str = Field(..., min_length=1, max_length=255)
+    score: int = Field(..., ge=0)
+    completed: bool = False
 
 class TaskCreate(TaskBase):
     pass
