@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import engine, Base, get_db, init_db
-from app import crud, schemas
-from app.models import Task
+from .database.database import engine, Base, get_db, init_db 
+from .services import task as services
+from .schemas import task as schemas
+from .models.task import Task
 from typing import List
 
 app = FastAPI(
@@ -45,22 +46,22 @@ async def create_task(task: schemas.TaskCreate, db: AsyncSession = Depends(get_d
         score=task.score,
         completed=task.completed
     )
-    return await crud.create_task(db, db_task)
+    return await services.create_task(db, db_task)
 
 @app.get("/tasks/", response_model=List[schemas.Task], tags=["tasks"])
 async def read_tasks(db: AsyncSession = Depends(get_db)):
-    return await crud.get_tasks(db)
+    return await services.get_tasks(db)
 
 @app.put("/tasks/{task_id}", response_model=schemas.Task, tags=["tasks"])
 async def update_task(task_id: int, task: schemas.TaskUpdate, db: AsyncSession = Depends(get_db)):
-    db_task = await crud.update_task(db, task_id, task.title, task.description, task.score, task.completed)
+    db_task = await services.update_task(db, task_id, task.title, task.description, task.score, task.completed)
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
     return db_task
 
 @app.delete("/tasks/{task_id}", response_model=schemas.Task, tags=["tasks"])
 async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    db_task = await crud.delete_task(db, task_id)
+    db_task = await services.delete_task(db, task_id)
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
     return db_task
