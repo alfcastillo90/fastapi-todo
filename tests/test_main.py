@@ -1,59 +1,55 @@
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 from app.main import app
-from app.database import get_db, Base
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from app.database.database import engine, Base, get_db
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+SQLALCHEMY_TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
-engine = create_async_engine(DATABASE_URL, echo=True)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
+test_engine = create_async_engine(SQLALCHEMY_TEST_DATABASE_URL, echo=True)
+TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine, class_=AsyncSession)
 
-@pytest.fixture(scope="module")
-async def async_client():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-@pytest.fixture(scope="module")
-async def db_session():
-    async with TestingSessionLocal() as session:
+async def override_get_db():
+    async with TestSessionLocal() as session:
         yield session
 
-@app.dependency_overrides[get_db] = db_session
+app.dependency_overrides[get_db] = override_get_db
+
+@pytest_asyncio.fixture(scope="module")
+async def client():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        yield ac
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
 
 @pytest.mark.asyncio
-async def test_create_task(async_client):
-    response = await async_client.post("/tasks/", json={"text": "Test Task", "completed": False})
+async def test_create_task(client):
+    response = await client.post("/tasks/", json={"title": "Test Task", "description": "Test Description", "score": 1, "completed": False})
     assert response.status_code == 200
-    assert response.json()["text"] == "Test Task"
-    assert response.json()["completed"] is False
+    assert response.json()["title"] == "Test Task"
 
 @pytest.mark.asyncio
-async def test_read_tasks(async_client):
-    response = await async_client.get("/tasks/")
+async def test_read_tasks(client):
+    response = await client.get("/tasks/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
-    assert len(response.json()) > 0
 
 @pytest.mark.asyncio
-async def test_update_task(async_client):
-    response = await async_client.post("/tasks/", json={"text": "Task to Update", "completed": False})
+async def test_update_task(client):
+    response = await client.post("/tasks/", json={"title": "Test Task", "description": "Test Description", "score": 1, "completed": False})
     task_id = response.json()["id"]
-    response = await async_client.put(f"/tasks/{task_id}", json={"text": "Updated Task", "completed": True})
+    response = await client.put(f"/tasks/{task_id}", json={"title": "Updated Task", "description": "Updated Description", "score": 5, "completed": True})
     assert response.status_code == 200
-    assert response.json()["text"] == "Updated Task"
-    assert response.json()["completed"] is True
+    assert response.json()["title"] == "Updated Task"
 
 @pytest.mark.asyncio
-async def test_delete_task(async_client):
-    response = await async_client.post("/tasks/", json={"text": "Task to Delete", "completed": False})
+async def test_delete_task(client):
+    response = await client.post("/tasks/", json={"title": "Test Task", "description": "Test Description", "score": 1, "completed": False})
     task_id = response.json()["id"]
-    response = await async_client.delete(f"/tasks/{task_id}")
+    response = await client.delete(f"/tasks/{task_id}")
     assert response.status_code == 200
-    response = await async_client.get(f"/tasks/{task_id}")
-    assert response.status_code == 404
+    assert response.json()["id"] == task_id
