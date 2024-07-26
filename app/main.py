@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import engine, Base, get_db, init_db
 from app import crud, schemas
@@ -15,6 +16,21 @@ app = FastAPI(
             "description": "Operaciones con tareas"
         }
     ]
+)
+
+# Configuración de CORS
+origins = [
+    "http://localhost",
+    "http://localhost:3000",  # URL del frontend de React
+    "http://127.0.0.1:3000",  # Otra posible URL del frontend
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.on_event("startup")
