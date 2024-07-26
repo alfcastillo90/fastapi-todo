@@ -1,6 +1,6 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import Task
+from app.models.task import Task
 
 async def get_tasks(db: AsyncSession):
     result = await db.execute(select(Task))
