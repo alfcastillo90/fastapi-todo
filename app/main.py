@@ -6,6 +6,18 @@ from app.models import Task
 
 app = FastAPI()
 
+app = FastAPI(
+    title="To-Do List API",
+    description="API para gestionar una lista de tareas utilizando FastAPI y MySQL",
+    version="1.0.0",
+    openapi_tags=[
+        {
+            "name": "tasks",
+            "description": "Operaciones con tareas"
+        }
+    ]
+)
+
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:
